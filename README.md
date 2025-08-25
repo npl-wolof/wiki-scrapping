@@ -1,41 +1,135 @@
-# Wikipedia Wolof — Scraper via API
+# Corpus Wolof – Scraping Wikipédia pour NLP
 
-## Pourquoi tu as eu `403 Forbidden` ?
-- Tu as probablement fait un `requests.get` direct sur la page HTML **sans User-Agent descriptif**.
-- Wikimedia **recommande et peut exiger** un User-Agent clair avec un moyen de contact.
-- Solution : soit **utiliser l'API officielle** (ce script), soit au minimum ajouter un header `User-Agent` quand tu fais un GET sur une page.
+Ce projet a pour objectif de **constituer un corpus en langue Wolof** à partir de Wikipédia (`wo.wikipedia.org`) pour des travaux de **Natural Language Processing (NLP)**, incluant la récupération de mots, expressions et articles complets.
 
-### Exemple minimal (page HTML FR avec UA)
-```python
-import requests
-url = "https://fr.wikipedia.org/wiki/Wolof_(langue)"
-headers = {"User-Agent": "npl-wolof/1.0 (mailto:odiop6170@gmail.com)"}
-html = requests.get(url, headers=headers, timeout=30)
-html.raise_for_status()
-print(html.text[:500])
+---
+
+## Table des matières
+
+1. [Présentation](#présentation)  
+2. [Scripts utilisés](#scripts-utilisés)  
+3. [Workflow de scraping](#workflow-de-scraping)  
+4. [Installation et dépendances](#installation-et-dépendances)  
+5. [Exécution](#exécution)  
+6. [Fichiers générés](#fichiers-générés)  
+7. [Bonnes pratiques](#bonnes-pratiques)  
+8. [Conseils pour NLP](#conseils-pour-nlp)  
+9. [Auteur](#auteur)  
+
+---
+
+## Présentation
+
+Wikipédia Wolof est limité en contenu, et certains articles n'ont pas de texte extractible directement. Ce projet combine trois approches pour maximiser la récupération de données :
+
+1. **Scraping direct des pages en français** pour extraire les mots Wolof listés dans les tableaux de vocabulaire.  
+2. **API MediaWiki (`generator=allpages`)** pour récupérer les articles complets en wikitext.  
+3. **Version améliorée avec fallback HTML** pour garantir le texte même si `prop=extracts` est vide.
+
+Le corpus obtenu permet d’alimenter des modèles NLP pour :
+
+- Analyse lexicale et morphologique.  
+- Création de dictionnaires.  
+- Applications de traduction ou NLP Wolof.
+
+---
+
+## Scripts utilisés
+
+### 1. `scrape_vocab_wolof.py`
+- Scraping direct depuis la page Wikipédia **française** sur la langue Wolof.  
+- Utilise **BeautifulSoup** pour extraire les mots dans les tableaux.  
+- Sauvegarde en CSV (`mots_wolof.csv`) avec une colonne `mot_wolof`.  
+
+**Usage :**
+```bash
+python scrape_vocab_wolof.py
 ```
+2. wowiki_scraper.py
 
-## Utiliser ce scraper (API) — recommandé
-```powershell
-python -m venv wiki
-.\wiki\Scripts\Activate.ps1
-pip install --upgrade pip
-pip install -r requirements.txt
+Scraping via l’API MediaWiki pour récupérer le wikitext complet (prop=revisions).
 
-# Récupérer 5000 articles (texte brut) du wiki wolof
+Filtrage par préfixe de titre (--prefix) et longueur minimum (--min-chars).
+
+Sauvegarde en JSONL et optionnellement en CSV.
+
+Usage :
+
 python wowiki_scraper.py --limit 5000 --out wowiki.jsonl --csv wowiki.csv
 
-# Récupérer seulement les titres commençant par 'a'
-python wowiki_scraper.py --prefix a --limit 1000 -o a.jsonl
+3. wowiki_scraper_v2.py
 
-# Filtrer les articles < 200 caractères
-python wowiki_scraper.py --min-chars 200 -o wowiki_clean.jsonl
-```
+Version améliorée : récupère d’abord prop=extracts et, en cas de texte vide, fait un fallback HTML (action=parse) converti en texte avec BeautifulSoup.
 
-## Pour des volumes énormes
-- Télécharge les **dumps** sur https://dumps.wikimedia.org/wowiki/latest/ (ou autre langue) puis extrais le texte avec **WikiExtractor** :
-```powershell
-pip install wikiextractor
-python -m wikiextractor --json --no_templates --output extracted wuwiki-*-pages-articles-multistream.xml.bz2
-```
-- C'est la méthode la plus stable/rapide pour de très gros corpus.
+Assure la récupération maximale du contenu.
+
+Sortie JSONL + CSV optionnel.
+
+Usage :
+
+python wowiki_scraper_v2.py --limit 5000 --out wowiki_v2.jsonl --csv wowiki_v2.csv
+
+Workflow de scraping
+
+Récupération lexicale (français → Wolof)
+
+Extraire les tableaux de vocabulaire → CSV mots_wolof.csv.
+
+Récupération articles Wolof (API MediaWiki)
+
+generator=allpages → prop=revisions → JSONL wowiki.jsonl.
+
+Fallback HTML pour articles vides
+
+prop=extracts → si vide, action=parse → conversion HTML → JSONL wowiki_v2.jsonl.
+
+Conversion optionnelle en CSV pour exploitation simple.
+
+Installation et dépendances
+
+Cloner le dépôt :
+
+git clone <URL_DU_DEPOT>
+cd wiki
+
+
+Créer un environnement virtuel :
+
+python -m venv venv
+# Linux / Mac
+source venv/bin/activate
+# Windows
+venv\Scripts\activate
+
+
+Installer les dépendances :
+
+pip install -r requirements.txt
+
+
+Ignorer le venv dans Git :
+
+# Ignorer l'environnement virtuel
+venv/
+
+Exécution
+Exemples de commandes :
+
+Scraping vocabulaire :
+
+python scrape_vocab_wolof.py
+
+
+Scraping articles Wolof (limite 5000) :
+
+python wowiki_scraper.py --limit 5000 --out wowiki.jsonl --csv wowiki.csv
+
+
+Scraping amélioré avec fallback HTML :
+
+python wowiki_scraper_v2.py --limit 5000 --out wowiki_v2.jsonl --csv wowiki_v2.csv
+
+
+Filtrer par préfixe et longueur minimale :
+
+python wowiki_scraper_v2.py --prefix A --min-chars 200 --out wowiki_v2.jsonl
