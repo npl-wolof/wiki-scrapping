@@ -20,7 +20,7 @@ print(html.text[:500])
 python -m venv wiki
 .\wiki\Scripts\Activate.ps1
 pip install --upgrade pip
-pip install -r requirements_wowiki.txt
+pip install -r requirements.txt
 
 # Récupérer 5000 articles (texte brut) du wiki wolof
 python wowiki_scraper.py --limit 5000 --out wowiki.jsonl --csv wowiki.csv
